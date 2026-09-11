@@ -1,5 +1,6 @@
 """Transformacoes reutilizaveis do stream pipeline."""
 
+from __future__ import annotations
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import avg, col, concat, count, expr, lit, round as spark_round
 from pyspark.sql.functions import sum as spark_sum

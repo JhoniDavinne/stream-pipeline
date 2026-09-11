@@ -1,38 +1,84 @@
 services:
+
   stream-pipeline:
     build: .
     container_name: stream-pipeline
+
     environment:
       PIPELINE_RUNTIME_SECONDS: "30"
       PIPELINE_ROWS_PER_SECOND: "5"
+
+      PYSPARK_PYTHON: python3
+      PYSPARK_DRIVER_PYTHON: python3
+
+      PYTHONPATH: /opt/stream-pipeline
+      PIPELINE_BASE_DIR: /opt/stream-pipeline
+
     volumes:
       - ./data:/opt/stream-pipeline/data
+
+    command:
+      [
+        "/opt/spark/bin/spark-submit",
+        "--master",
+        "local[2]",
+        "/opt/stream-pipeline/src/medallion_pipeline.py"
+      ]
+
+
+  tests:
+    build: .
+    container_name: stream-pipeline-tests
+
+    environment:
+      PYTHONPATH: /opt/stream-pipeline
+      PYSPARK_PYTHON: python3
+      PYSPARK_DRIVER_PYTHON: python3
+
+    command:
+      ["python3", "-m", "pytest", "-q"]
+
+    volumes:
+      - ./data:/opt/stream-pipeline/data
+
 
   minio:
     image: minio/minio:latest
     container_name: stream-pipeline-minio
-    command: server /data --console-address ":9001"
+
+    command:
+      server /data --console-address ":9001"
+
     environment:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: minio123
+
     ports:
       - "9000:9000"
       - "9001:9001"
+
     volumes:
       - minio_data:/data
+
 
   postgres:
     image: postgres:16
     container_name: stream-pipeline-postgres
-    profiles: ["warehouse"]
+
+    profiles:
+      - warehouse
+
     environment:
       POSTGRES_DB: vehicle_financing
       POSTGRES_USER: dw_user
       POSTGRES_PASSWORD: dw_password
+
     ports:
       - "5432:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
 
 volumes:
   minio_data:

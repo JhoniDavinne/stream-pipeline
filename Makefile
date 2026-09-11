@@ -1,34 +1,43 @@
-PYTHON ?= python3
-PIP ?= pip3
+COMPOSE=docker compose
 
-.PHONY: install test run run-raw run-trusted run-refined validate-layers query-dw producer clean
+.PHONY: build test run up down logs producer clean minio postgres
 
-install:
-	$(PIP) install -r requirements.txt
+build:
+	$(COMPOSE) build
 
 test:
-	PYTHONPATH=. $(PYTHON) -m pytest -q
+	$(COMPOSE) run --rm tests
 
 run:
-	PYTHONPATH=src $(PYTHON) src/medallion_pipeline.py
+	$(COMPOSE) up --build stream-pipeline
 
-run-raw:
-	PYTHONPATH=src $(PYTHON) src/raw.py
+up:
+	$(COMPOSE) up --build
 
-run-trusted:
-	PYTHONPATH=src $(PYTHON) src/trusted.py
+down:
+	$(COMPOSE) down
 
-run-refined:
-	PYTHONPATH=src $(PYTHON) src/refined.py
-
-validate-layers:
-	PYTHONPATH=src $(PYTHON) src/validate_layers.py
-
-query-dw:
-	PYTHONPATH=src $(PYTHON) src/query_dw.py
+logs:
+	$(COMPOSE) logs -f stream-pipeline
 
 producer:
-	$(PYTHON) producer/generate_events.py --events 20 --output data/input/events.jsonl
+	docker compose run --rm stream-pipeline \
+		python3 producer/generate_events.py \
+		--events 20 \
+		--output data/input/events.jsonl
+
+minio:
+	$(COMPOSE) up -d minio
+
+postgres:
+	$(COMPOSE) --profile warehouse up -d postgres
 
 clean:
-	rm -rf data/output/* data/checkpoint/* .pytest_cache src/__pycache__ tests/__pycache__
+	rm -rf data/output/*
+	rm -rf data/checkpoint/*
+	rm -rf data/raw/*
+	rm -rf data/trusted/*
+	rm -rf data/refined/*
+	rm -rf .pytest_cache
+	rm -rf src/__pycache__
+	rm -rf tests/__pycache__
