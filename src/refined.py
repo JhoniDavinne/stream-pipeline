@@ -51,12 +51,59 @@ def aggregate_refined(
     )
 
 
-def write_refined_batch(batch_df: DataFrame, batch_id: int, config: PipelineConfig) -> None:
-    """Materializa cada microbatch em Parquet e na tabela SQLite do DW."""
-    # O Parquet permanece como artefato analitico; SQLite oferece consultas SQL locais.
-    batch_df.write.mode("append").format("parquet").partitionBy(
+def aggregate_refined_batch(trusted_df: DataFrame, window_duration: str) -> DataFrame:
+    """Agrega a camada trusted em batch para fechar as janelas da execucao local."""
+    return (
+        trusted_df
+        .groupBy(
+            window(col("created_at"), window_duration),
+            col("segment"),
+            col("region"),
+            col("vehicle_type"),
+            col("vehicle_brand"),
+            col("vehicle_model"),
+        )
+        .agg(
+            count("financing_id").alias("financing_count"),
+            spark_round(spark_sum("financed_amount"), 2).alias("total_financed_amount"),
+            spark_round(avg("monthly_installment"), 2).alias("average_monthly_installment"),
+            spark_round(avg("interest_rate_monthly"), 4).alias("average_interest_rate_monthly"),
+        )
+        .select(
+            col("window.start").alias("window_start"),
+            col("window.end").alias("window_end"),
+            "segment", "region", "vehicle_type", "vehicle_brand", "vehicle_model",
+            "financing_count", "total_financed_amount", "average_monthly_installment",
+            "average_interest_rate_monthly",
+        )
+    )
+
+
+def materialize_refined_snapshot(spark: SparkSession, config: PipelineConfig) -> None:
+    """Fecha as janelas em batch e garante uma tabela DW consultavel."""
+    trusted_df = spark.read.schema(FINANCING_SCHEMA).parquet(str(config.trusted_dir))
+    refined_df = aggregate_refined_batch(trusted_df, config.window_duration)
+    refined_df.write.mode("overwrite").format("parquet").partitionBy(
         "segment", "region", "vehicle_type"
     ).save(str(config.refined_dir))
+
+    with sqlite3.connect(config.sqlite_path) as connection:
+        connection.execute(f"DROP TABLE IF EXISTS {SUMMARY_TABLE}")
+    write_refined_batch(refined_df, -1, config, write_parquet=False)
+
+
+def write_refined_batch(
+    batch_df: DataFrame,
+    batch_id: int,
+    config: PipelineConfig,
+    write_parquet: bool = True,
+) -> None:
+    """Materializa cada microbatch em Parquet e na tabela SQLite do DW."""
+    # O Parquet permanece como artefato analitico; SQLite oferece consultas SQL locais.
+    if write_parquet:
+        batch_df.write.mode("append").format("parquet").partitionBy(
+            "segment", "region", "vehicle_type"
+        ).save(str(config.refined_dir))
 
     with sqlite3.connect(config.sqlite_path) as connection:
         connection.execute(

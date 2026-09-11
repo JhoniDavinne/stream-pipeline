@@ -6,7 +6,7 @@ from pyspark.sql import SparkSession
 
 from config import PipelineConfig
 from raw import start_raw_query
-from refined import start_refined_query
+from refined import materialize_refined_snapshot, start_refined_query
 from trusted import start_trusted_query
 
 
@@ -41,6 +41,10 @@ def run_medallion_pipeline(config: PipelineConfig) -> None:
     finally:
         for query in reversed(queries):
             query.stop()
+        # A execucao local e finita: fecha as janelas em batch para disponibilizar
+        # os dados imediatamente no SQLite, sem esperar o watermark expirar.
+        if (config.trusted_dir / "_spark_metadata").exists():
+            materialize_refined_snapshot(spark, config)
         spark.stop()
 
 
