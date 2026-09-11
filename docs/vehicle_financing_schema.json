@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/vehicle-financing-transaction.schema.json",
+  "title": "Vehicle and Motorcycle Financing Product",
+  "product_name": "vehicle_financing_transactions_product",
+  "version": "1.0.0",
+  "domain": "Fintech & Vehicle Financing",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "financing_id",
+    "customer_id",
+    "vehicle_type",
+    "vehicle_id",
+    "vehicle_brand",
+    "vehicle_model",
+    "vehicle_year",
+    "segment",
+    "region",
+    "state",
+    "city",
+    "financed_amount",
+    "down_payment",
+    "installment_count",
+    "monthly_installment",
+    "interest_rate_monthly",
+    "status",
+    "currency",
+    "created_at"
+  ],
+  "properties": {
+    "financing_id": {
+      "type": "string",
+      "description": "Identificador unico do contrato de financiamento.",
+      "pattern": "^FIN-[0-9]{10}$"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Identificador pseudo-anonimizado do cliente.",
+      "pattern": "^CUS-[A-Z0-9]{8}$"
+    },
+    "vehicle_type": {
+      "type": "string",
+      "enum": ["CAR", "MOTORCYCLE"],
+      "description": "Tipo de veiculo financiado."
+    },
+    "vehicle_id": {
+      "type": "string",
+      "description": "Identificador interno ou chassi tokenizado do veiculo."
+    },
+    "vehicle_brand": {
+      "type": "string",
+      "minLength": 2,
+      "description": "Marca do veiculo."
+    },
+    "vehicle_model": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Modelo do veiculo."
+    },
+    "vehicle_year": {
+      "type": "integer",
+      "minimum": 2000,
+      "maximum": 2100,
+      "description": "Ano de fabricacao ou modelo do veiculo."
+    },
+    "segment": {
+      "type": "string",
+      "enum": ["mass_market", "standard", "premium"],
+      "description": "Segmento comercial do financiamento."
+    },
+    "region": {
+      "type": "string",
+      "enum": ["NORTH", "NORTHEAST", "MIDWEST", "SOUTHEAST", "SOUTH"],
+      "description": "Regiao geografica brasileira da operacao."
+    },
+    "state": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$",
+      "description": "Unidade federativa da operacao."
+    },
+    "city": {
+      "type": "string",
+      "minLength": 2,
+      "description": "Cidade da operacao."
+    },
+    "financed_amount": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "multipleOf": 0.01,
+      "description": "Valor principal financiado, sem a entrada."
+    },
+    "down_payment": {
+      "type": "number",
+      "minimum": 0,
+      "multipleOf": 0.01,
+      "description": "Valor pago como entrada na contratacao."
+    },
+    "installment_count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 120,
+      "description": "Quantidade total de parcelas do contrato."
+    },
+    "monthly_installment": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "multipleOf": 0.01,
+      "description": "Valor mensal de cada parcela."
+    },
+    "interest_rate_monthly": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Taxa de juros nominal mensal em percentual."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["SIMULATION", "PENDING_APPROVAL", "APPROVED", "ACTIVE", "PAID_OFF", "CANCELLED", "DEFAULTED"],
+      "description": "Status operacional do financiamento."
+    },
+    "currency": {
+      "type": "string",
+      "enum": ["BRL"],
+      "description": "Codigo da moeda conforme ISO 4217."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e hora de criacao do contrato em UTC."
+    }
+  }
+}

@@ -1,0 +1,19 @@
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.venv/
+env/
+.ipynb_checkpoints/
+
+# Saidas geradas pelo pipeline
+data/output/*
+data/checkpoint/*
+data/raw/*
+data/trusted/*
+data/refined/*
+!data/output/.gitkeep
+!data/checkpoint/.gitkeep
+
+# Logs
+*.log
+.DS_Store
