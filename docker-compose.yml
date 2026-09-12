@@ -1,3 +1,4 @@
+
 services:
 
   stream-pipeline:
@@ -11,8 +12,17 @@ services:
       PYSPARK_PYTHON: python3
       PYSPARK_DRIVER_PYTHON: python3
 
-      PYTHONPATH: /opt/stream-pipeline
+      PYTHONPATH: /opt/stream-pipeline/src:/opt/stream-pipeline
       PIPELINE_BASE_DIR: /opt/stream-pipeline
+
+      # Configuracao do MinIO
+      MINIO_ENDPOINT: http://172.18.0.1:9000
+      MINIO_ACCESS_KEY: minio
+      MINIO_SECRET_KEY: minio123
+      MINIO_BUCKET: stream-pipeline
+
+    ports:
+      - "4040:4040"
 
     volumes:
       - ./data:/opt/stream-pipeline/data
@@ -31,7 +41,7 @@ services:
     container_name: stream-pipeline-tests
 
     environment:
-      PYTHONPATH: /opt/stream-pipeline
+      PYTHONPATH: /opt/stream-pipeline/src:/opt/stream-pipeline
       PYSPARK_PYTHON: python3
       PYSPARK_DRIVER_PYTHON: python3
 
@@ -43,7 +53,7 @@ services:
 
 
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     container_name: stream-pipeline-minio
 
     command:
@@ -59,6 +69,25 @@ services:
 
     volumes:
       - minio_data:/data
+
+
+  minio-init:
+    image: quay.io/minio/mc:latest
+    container_name: stream-pipeline-minio-init
+
+    depends_on:
+      - minio
+
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minio minio123; do
+        echo 'Aguardando MinIO...';
+        sleep 2;
+      done;
+      mc mb --ignore-existing local/stream-pipeline;
+      echo 'Bucket stream-pipeline criado/verificado com sucesso.';
+      exit 0;
+      "
 
 
   postgres:
