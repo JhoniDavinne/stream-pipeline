@@ -16,6 +16,10 @@ RUN wget -q \
     https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar \
     -O /opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar
 
+RUN wget -q \
+    https://jdbc.postgresql.org/download/postgresql-${POSTGRES_JDBC_VERSION}.jar \
+    -O /opt/spark/jars/postgresql-${POSTGRES_JDBC_VERSION}.jar    
+
 COPY src ./src
 COPY producer ./producer
 COPY tests ./tests
@@ -26,5 +30,6 @@ ENV PIPELINE_BASE_DIR=/opt/stream-pipeline
 
 ENV PYSPARK_PYTHON=python3
 ENV PYSPARK_DRIVER_PYTHON=python3
+ENV POSTGRES_JDBC_VERSION=42.7.8
 
 CMD ["/opt/spark/bin/spark-submit", "--master", "local[2]", "/opt/stream-pipeline/src/medallion_pipeline.py"]
