@@ -181,17 +181,33 @@ Construa a imagem:
 docker compose build
 ```
 
-Execute o pipeline:
+Suba primeiro o MinIO:
+
+```bash
+docker compose up -d minio
+```
+
+Inicialize o bucket e aguarde a conclusão:
+
+```bash
+docker compose run --rm minio-init
+```
+
+Em seguida, execute o pipeline:
 
 ```bash
 docker compose up stream-pipeline
 ```
 
-Para reconstruir a imagem e executar:
+Para reconstruir a imagem do pipeline antes de executar:
 
 ```bash
 docker compose up --build stream-pipeline
 ```
+
+O serviço `stream-pipeline` grava os dados no MinIO usando S3A. Por isso, o
+MinIO precisa estar em execução e o serviço `minio-init` precisa concluir a
+criação do bucket antes do pipeline começar.
 
 ---
 

@@ -1,9 +1,14 @@
 
 services:
 
+  # ============================================================
+  # STREAM PIPELINE
+  # ============================================================
   stream-pipeline:
     build: .
     container_name: stream-pipeline
+
+    network_mode: host
 
     environment:
       PIPELINE_RUNTIME_SECONDS: "30"
@@ -15,17 +20,21 @@ services:
       PYTHONPATH: /opt/stream-pipeline/src:/opt/stream-pipeline
       PIPELINE_BASE_DIR: /opt/stream-pipeline
 
-      # Configuracao do MinIO
-      MINIO_ENDPOINT: http://172.18.0.1:9000
+      # MinIO
+      MINIO_ENDPOINT: http://127.0.0.1:9000
       MINIO_ACCESS_KEY: minio
       MINIO_SECRET_KEY: minio123
       MINIO_BUCKET: stream-pipeline
 
-    ports:
-      - "4040:4040"
-
     volumes:
       - ./data:/opt/stream-pipeline/data
+
+    depends_on:
+      - minio
+      - minio-init
+
+    ports:
+      - "4040:4040"
 
     command:
       [
@@ -36,6 +45,9 @@ services:
       ]
 
 
+  # ============================================================
+  # TESTS
+  # ============================================================
   tests:
     build: .
     container_name: stream-pipeline-tests
@@ -46,50 +58,65 @@ services:
       PYSPARK_DRIVER_PYTHON: python3
 
     command:
-      ["python3", "-m", "pytest", "-q"]
+      [
+        "python3",
+        "-m",
+        "pytest",
+        "-q"
+      ]
 
     volumes:
       - ./data:/opt/stream-pipeline/data
 
 
+  # ============================================================
+  # MINIO
+  # ============================================================
   minio:
     image: quay.io/minio/minio:latest
     container_name: stream-pipeline-minio
 
+    network_mode: host
+
     command:
-      server /data --console-address ":9001"
+      server /data --address ":9000" --console-address ":9001"
 
     environment:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: minio123
 
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-
     volumes:
       - minio_data:/data
 
 
+  # ============================================================
+  # MINIO INITIALIZATION
+  # ============================================================
   minio-init:
     image: quay.io/minio/mc:latest
     container_name: stream-pipeline-minio-init
+
+    network_mode: host
 
     depends_on:
       - minio
 
     entrypoint: >
       /bin/sh -c "
-      until mc alias set local http://minio:9000 minio minio123; do
-        echo 'Aguardando MinIO...';
+      echo 'Aguardando MinIO...';
+      until mc alias set local http://127.0.0.1:9000 minio minio123; do
+        echo 'MinIO ainda não está disponível...';
         sleep 2;
       done;
+      echo 'MinIO disponível!';
       mc mb --ignore-existing local/stream-pipeline;
       echo 'Bucket stream-pipeline criado/verificado com sucesso.';
-      exit 0;
       "
 
 
+  # ============================================================
+  # POSTGRES
+  # ============================================================
   postgres:
     image: postgres:16
     container_name: stream-pipeline-postgres
@@ -109,6 +136,9 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
 
+# ==============================================================
+# VOLUMES
+# ==============================================================
 volumes:
   minio_data:
   postgres_data:
